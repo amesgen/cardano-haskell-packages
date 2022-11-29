@@ -109,6 +109,8 @@ jobs:
         with:
           ghc-version: 8.10.7
           package-id: plutus-core # FIXME
+      - if: ${{ failure() }}
+        uses: mxschmitt/action-tmate@v3
 
   deploy-check:
     runs-on: ubuntu-latest
