@@ -101,9 +101,10 @@ jobs:
     needs:
       - build
     uses: ./.github/workflows/builder.yml
+    continue-on-error: true
     with:
       ghc-version: 8.10.7
-      package-id: plutus-core # FIXME
+      package-id: ouroboros-network # FIXME
 
   deploy-check:
     runs-on: ubuntu-latest
