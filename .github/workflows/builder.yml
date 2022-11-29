@@ -12,9 +12,11 @@ on:
       ghc-version:
         description: GHC version to use
         required: true
+        type: string
       index-state:
         description: Index state to use
         required: false
+        type: string
         default: HEAD
 
 jobs:
