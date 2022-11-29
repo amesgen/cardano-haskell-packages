@@ -162,7 +162,7 @@ jobs:
 
       - name: Run cabal update for project
         run: |
-          mkdir $CABAL_DIR/packages/cardano-haskell-packages # workaround for cabal bug
+          mkdir -p $CABAL_DIR/packages/cardano-haskell-packages # workaround for cabal bug
           cabal update
 
       - name: Formulate install plan for ${{ inputs.package-id }}
