@@ -12,12 +12,6 @@ on:
       ghc-version:
         description: GHC version to use
         required: true
-        type: choice
-        options:
-          - 8.10.7
-          - 9.0.2
-          - 9.2.5
-          - 9.4.3
       index-state:
         description: Index state to use
         required: false
