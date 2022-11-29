@@ -1,0 +1,182 @@
+name: Build a package
+
+run-name: Build ${{ inputs.package-id }} with GHC ${{ inputs.ghc-version }}
+
+on:
+  workflow_call:
+    inputs:
+      package-id:
+        description: Package to build
+        required: true
+        type: string
+      ghc-version:
+        description: GHC version to use
+        required: true
+        type: choice
+        options:
+          - 8.10.7
+          - 9.0.2
+          - 9.2.5
+          - 9.4.3
+      index-state:
+        description: Index state to use
+        required: false
+        default: HEAD
+
+jobs:
+  build:
+    runs-on:
+      - ubuntu-22.04
+
+    steps:
+
+      ## sodium
+
+      - name: libsodium - cache
+        uses: actions/cache@v3
+        id: libsodium-cache
+        with:
+          path: extras/libsodium
+          key: libsodium-${{ runner.os }}
+
+      - name: libsodium - checkout
+        uses: actions/checkout@v2
+        if: steps.libsodium-cache.outputs.cache-hit != 'true'
+        with:
+          repository: input-output-hk/libsodium
+          ref: draft-irtf-cfrg-vrf-03
+          path: extras/libsodium/src
+
+      - name: libsodium - install
+        if: steps.libsodium-cache.outputs.cache-hit != 'true'
+        working-directory: extras/libsodium/src
+        run: |
+          ./autogen.sh -f # the configure script in the repo is outdated and missing the vrf stuff
+          ./configure --prefix=${{ github.workspace }}/extras/libsodium
+          make
+          make install
+
+      - name: libsodium - set PKG_CONFIG_PATH
+        run: |
+          echo "PKG_CONFIG_PATH=${{ github.workspace }}/extras/libsodium/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
+
+      ## secp256k1
+
+      - name: secp256k1 - cache
+        uses: actions/cache@v3
+        id: secp256k1-cache
+        with:
+          path: extras/secp256k1
+          key: secp256k1-${{ runner.os }}
+
+      - name: secp256k1 - checkout
+        uses: actions/checkout@v2
+        if: steps.secp256k1-cache.outputs.cache-hit != 'true'
+        with:
+          repository: bitcoin-core/secp256k1
+          path: extras/secp256k1/src
+
+      - name: secp256k1 - install
+        if: steps.secp256k1-cache.outputs.cache-hit != 'true'
+        working-directory: extras/secp256k1/src
+        run: |
+          ./autogen.sh
+          ./configure --enable-module-extrakeys --enable-module-schnorrsig --prefix=${{ github.workspace }}/extras/secp256k1
+          make
+          make install
+
+      - name: secp256k1 - set PKG_CONFIG_PATH
+        run: |
+          echo "PKG_CONFIG_PATH=${{ github.workspace }}/extras/secp256k1/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
+
+      ## GHC toolchain
+
+      - name: Set up ghc cache
+        id: ghc-cache
+        uses: actions/cache@v3
+        with:
+          path: ghc
+          key: ghc-${{ runner.os }}-${{ inputs.ghc-version }}
+
+      - name: Install GHC ${{ inputs.ghc-version }}
+        if: steps.ghc-cache.outputs.cache-hit != 'true'
+        run: ghcup install ghc ${{ inputs.ghc-version }} --isolate $PWD/ghc
+
+      - name: Add ghc bin to path
+        run: echo "$PWD/ghc/bin" >> $GITHUB_PATH
+
+      - name: Set up cabal cache
+        uses: actions/cache@v3
+        with:
+          path: cabal
+          key: cabal-${{ runner.os }}-${{ inputs.ghc-version }}-${{ github.run_id }}
+          restore-keys: cabal-${{ runner.os }}-${{ inputs.ghc-version }}
+
+      # Note: cache-hit is set to true only when cache hit occurs for the exact key match.
+      # For a partial key match like the one above, it will be set to false.
+      - name: Install cabal if necessary
+        run: |
+          [[ -x $PWD/cabal/bin/cabal ]] || ghcup install cabal latest --isolate $PWD/cabal/bin
+
+      - name: Add cabal bin to path
+        run: echo "$PWD/cabal/bin" >> $GITHUB_PATH
+
+      - name: Set cabal dir
+        run: echo "CABAL_DIR=$PWD/cabal" >> $GITHUB_ENV
+
+      # Why don't we have a binary distribution!?
+      - name: Build and install cabal-plan
+        id: cabal-plan
+        run: |
+          cabal update
+          cabal install cabal-plan --install-method=copy --overwrite-policy=always --constraint='cabal-plan +exe'
+        # A failure here is not essential
+        continue-on-error: true
+
+      ## Build package
+
+      - name: Download built repository
+        uses: actions/download-artifact@v3
+        with:
+          name: built-repo
+          path: built-repo
+
+      - name: Set up project for ${{ inputs.package-id }}
+        run: |
+          # We need at least an empty cabal.project to avoid the implicit one
+          cat >cabal.project <<EOF
+          repository cardano-haskell-packages
+            uri: file://$PWD/built-repo
+
+          extra-packages: ${{ inputs.package-id }}
+          index-state: ${{ inputs.index-state }}
+          EOF
+          # Parse package-id
+          PACKAGE_NAME_REGEX='(.*)(-([0-9]+)(.[0-9]+)*)?$'
+          [[ ${{ inputs.package-id }} =~ $PACKAGE_NAME_REGEX ]]
+          echo "PACKAGE_NAME=${BASH_REMATCH[1]}" >> $GITHUB_ENV
+
+      - name: Run cabal update for project
+        run: cabal update
+
+      - name: Formulate install plan for ${{ inputs.package-id }}
+        run: cabal build --dry-run ${{ env.PACKAGE_NAME }}
+
+      - name: Display cabal-plan
+        # This might not work
+        if: ${{ steps.cabal-plan.conclusion == 'success' }}
+        run: cabal-plan
+
+      - name: Build ${{ inputs.package-id }} dependencies
+        run: cabal build ${{ env.PACKAGE_NAME }} --only-dependencies
+
+      - name: Build ${{ inputs.package-id }}
+        working-directory: project
+        run: cabal build ${{ env.PACKAGE_NAME }}
+
+      # Workaround for cabal not display build errors (to be submitted)
+      - name: Show build failure
+        if: ${{ failure() && steps.cabal-build.conclusion == 'failure' }}
+        run: |
+          ID=$(jq -r '."install-plan"[].id | select(startswith(env.PACKAGE_NAME))' < dist-newstyle/cache/plan.json)
+          cat $HOME/.cabal/logs/ghc-${{ inputs.ghc-version }}/$ID.log

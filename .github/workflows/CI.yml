@@ -37,11 +37,11 @@ jobs:
             substituters        = https://cache.iog.io https://cache.nixos.org https://foliage.cachix.org
             trusted-public-keys = hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= foliage.cachix.org-1:kAFyYLnk8JcRURWReWZCatM9v3Rk24F5wNMpEj14Q/g=
 
-      - name: Checkout main 
+      - name: Checkout main
         uses: actions/checkout@v3
         with:
           ref: main
-             
+
       - uses: actions/cache@v3
         with:
           path: _cache
@@ -55,7 +55,7 @@ jobs:
             echo "Could not access repository secret keys (PR is coming from a fork?)"
             echo "Generating fresh keys for this run"
             nix develop -c foliage create-keys
-          else 
+          else
             mkdir _keys
             echo "$KEYS" | base64 -d | tar xvz -C _keys
           fi
@@ -79,7 +79,7 @@ jobs:
           cp static/index.html _repo
           cp README.md _repo
 
-      # Do this before the check, useful to have the artifact in case the 
+      # Do this before the check, useful to have the artifact in case the
       # check fails!
       - name: Upload artifact
         uses: actions/upload-artifact@v3
@@ -87,7 +87,7 @@ jobs:
           name: built-repo
           path: _repo
 
-      # Note: we use the check script from the tip so we pick up changes 
+      # Note: we use the check script from the tip so we pick up changes
       # to the script from the PR itself.
       - name: Check new index is an extension of the old index
         run: |
@@ -97,10 +97,19 @@ jobs:
           echo "then you may need to update the timestamps in your new packages to be newer than those in main."
           ./scripts/check-archive-extension.sh _repo-main/01-index.tar _repo/01-index.tar
 
+  builder-check:
+    needs:
+      - build
+    steps:
+      - uses: ./.github/workflows/builder.yml
+        with:
+          ghc-version: 8.10.7
+          package-id: plutus-core # FIXME
+
   deploy-check:
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: 
+    needs:
       - build
 
     steps:
@@ -130,7 +139,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: 
+    needs:
       - check
       - build
       - deploy-check
