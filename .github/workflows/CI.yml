@@ -103,7 +103,7 @@ jobs:
       - build
     steps:
       - uses: actions/checkout@v3
-      - uses: ./.github/workflows/builder.yml
+      - uses: input-output-hk/cardano-haskell-packages/.github/workflows/builder.yml@builder
         with:
           ghc-version: 8.10.7
           package-id: plutus-core # FIXME
