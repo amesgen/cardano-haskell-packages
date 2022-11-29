@@ -103,8 +103,6 @@ jobs:
       - build
     steps:
       - uses: actions/checkout@v3
-        with:
-          ref: ${{ github.ref }} # TEMP
       - uses: ./.github/workflows/builder.yml
         with:
           ghc-version: 8.10.7
