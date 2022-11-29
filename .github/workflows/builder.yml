@@ -142,7 +142,7 @@ jobs:
           # We need at least an empty cabal.project to avoid the implicit one
           cat >cabal.project <<EOF
           repository cardano-haskell-packages
-            url: built-repo
+            url: file://${{ github.workspace }}/built-repo
 
           extra-packages: ${{ inputs.package-id }}
           index-state: ${{ inputs.index-state }}
