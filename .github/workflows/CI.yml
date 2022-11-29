@@ -98,6 +98,8 @@ jobs:
           ./scripts/check-archive-extension.sh _repo-main/01-index.tar _repo/01-index.tar
 
   builder-check:
+    needs:
+      - build
     uses: ./.github/workflows/builder.yml
     with:
       ghc-version: 8.10.7
