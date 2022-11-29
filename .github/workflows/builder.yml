@@ -142,7 +142,7 @@ jobs:
           # We need at least an empty cabal.project to avoid the implicit one
           cat >cabal.project <<EOF
           repository cardano-haskell-packages
-            url: file://${{ github.workspace }}/built-repo
+            url: file:${{ github.workspace }}/built-repo
             secure: True
             root-keys:
               3e0cce471cf09815f930210f7827266fd09045445d65923e6d0238a6cd15126f
@@ -161,7 +161,9 @@ jobs:
           echo "PACKAGE_NAME=${BASH_REMATCH[1]}" >> $GITHUB_ENV
 
       - name: Run cabal update for project
-        run: cabal update
+        run: |
+          mkdir $CABAL_DIR/packages/cardano-haskell-packages # workaround for cabal bug
+          cabal update
 
       - name: Formulate install plan for ${{ inputs.package-id }}
         run: cabal build --dry-run ${{ env.PACKAGE_NAME }}
