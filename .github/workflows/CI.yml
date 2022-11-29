@@ -98,7 +98,7 @@ jobs:
           ./scripts/check-archive-extension.sh _repo-main/01-index.tar _repo/01-index.tar
 
   builder-check:
-    uses: .github/workflows/builder.yml
+    uses: .github/workflows/builder.yml@builder
     with:
       ghc-version: 8.10.7
       package-id: plutus-core # FIXME
