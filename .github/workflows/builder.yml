@@ -120,14 +120,14 @@ jobs:
       - name: Set cabal dir
         run: echo "CABAL_DIR=$PWD/cabal" >> $GITHUB_ENV
 
-      # Why don't we have a binary distribution!?
-      - name: Build and install cabal-plan
-        id: cabal-plan
-        run: |
-          cabal update
-          cabal install cabal-plan --install-method=copy --overwrite-policy=always --constraint='cabal-plan +exe'
-        # A failure here is not essential
-        continue-on-error: true
+      # # Why don't we have a binary distribution!?
+      # - name: Build and install cabal-plan
+      #   id: cabal-plan
+      #   run: |
+      #     cabal update
+      #     cabal install cabal-plan --install-method=copy --overwrite-policy=always --constraint='cabal-plan +exe'
+      #   # A failure here is not essential
+      #   continue-on-error: true
 
       ## Build package
 
@@ -142,7 +142,7 @@ jobs:
           # We need at least an empty cabal.project to avoid the implicit one
           cat >cabal.project <<EOF
           repository cardano-haskell-packages
-            uri: file://$PWD/built-repo
+            url: built-repo
 
           extra-packages: ${{ inputs.package-id }}
           index-state: ${{ inputs.index-state }}
@@ -158,10 +158,10 @@ jobs:
       - name: Formulate install plan for ${{ inputs.package-id }}
         run: cabal build --dry-run ${{ env.PACKAGE_NAME }}
 
-      - name: Display cabal-plan
-        # This might not work
-        if: ${{ steps.cabal-plan.conclusion == 'success' }}
-        run: cabal-plan
+      # - name: Display cabal-plan
+      #   # This might not work
+      #   if: ${{ steps.cabal-plan.conclusion == 'success' }}
+      #   run: cabal-plan
 
       - name: Build ${{ inputs.package-id }} dependencies
         run: cabal build ${{ env.PACKAGE_NAME }} --only-dependencies
