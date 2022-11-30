@@ -1,0 +1,25 @@
+name: Install GHC and cabal
+
+inputs:
+  path:
+    required: true
+    description: Path where to install GHC and cabal
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up ghc cache
+      id: ghc-cache
+      uses: actions/cache@v3
+      with:
+        path: ${{ inputs.path }}
+        key: ghc-${{ runner.os }}-${{ inputs.ghc-version }}
+
+    - name: Install GHC ${{ inputs.ghc-version }}
+      if: steps.ghc-cache.outputs.cache-hit != 'true'
+      run: |
+        ghcup install ghc ${{ inputs.ghc-version }} --isolate ${{ inputs.path }}
+        ghcup install cabal latest --isolate ${{ inputs.path }}/bin
+
+    - name: Add ghc bin to path
+      run: echo "${{ inputs.path }}/bin" >> $GITHUB_PATH
