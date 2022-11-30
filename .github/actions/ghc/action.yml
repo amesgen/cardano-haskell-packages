@@ -16,10 +16,12 @@ runs:
         key: ghc-${{ runner.os }}-${{ inputs.ghc-version }}
 
     - name: Install GHC ${{ inputs.ghc-version }}
+      shell: bash
       if: steps.ghc-cache.outputs.cache-hit != 'true'
       run: |
         ghcup install ghc ${{ inputs.ghc-version }} --isolate ${{ inputs.path }}
         ghcup install cabal latest --isolate ${{ inputs.path }}/bin
 
     - name: Add ghc bin to path
+      shell: bash
       run: echo "${{ inputs.path }}/bin" >> $GITHUB_PATH
