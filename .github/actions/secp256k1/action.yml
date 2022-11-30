@@ -1,0 +1,33 @@
+name: Install secp256k1
+
+inputs:
+  path:
+    required: true
+    description: Path relative to github.workspace where to install secp256k1
+
+runs:
+  using: "composite"
+  steps:
+    - name: secp256k1 - cache
+      uses: actions/cache@v3
+      id: secp256k1-cache
+      with:
+        path: ${{ inputs.path }}
+        key: secp256k1-${{ runner.os }}
+
+    - name: secp256k1 - checkout
+      uses: actions/checkout@v3
+      if: steps.secp256k1-cache.outputs.cache-hit != 'true'
+      with:
+        repository: bitcoin-core/secp256k1
+        path: ${{ inputs.path }}/src
+
+    - name: secp256k1 - install
+      if: steps.secp256k1-cache.outputs.cache-hit != 'true'
+      shell: bash
+      working-directory: ${{ input.path }}/src
+      run: |
+        ./autogen.sh
+        ./configure --enable-module-extrakeys --enable-module-schnorrsig --prefix=${{ github.workspace }}/${{ input.path }}
+        make
+        make install

@@ -1,0 +1,34 @@
+name: Install libsodium
+
+inputs:
+  path:
+    required: true
+    description: Path relative to github.workspace where to install libsodium
+
+runs:
+  using: "composite"
+  steps:
+    - name: libsodium - cache
+      uses: actions/cache@v3
+      id: libsodium-cache
+      with:
+        path: ${{ inputs.path }}
+        key: libsodium-${{ runner.os }}
+
+    - name: libsodium - checkout
+      uses: actions/checkout@v3
+      if: steps.libsodium-cache.outputs.cache-hit != 'true'
+      with:
+        repository: input-output-hk/libsodium
+        ref: draft-irtf-cfrg-vrf-03
+        path: ${{ inputs.path }}/src
+
+    - name: libsodium - install
+      shell: bash
+      if: steps.libsodium-cache.outputs.cache-hit != 'true'
+      working-directory: ${{ inputs.path }}/src
+      run: |
+        ./autogen.sh -f # the configure script in the repo is outdated and missing the vrf stuff
+        ./configure --prefix=${{ github.workspace }}/${{ inputs.path }}
+        make
+        make install
