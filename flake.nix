@@ -17,7 +17,7 @@
               bash
               coreutils
               curl
-              git
+              gitMinimal
               gnutar
               foliage.packages.${system}.default
             ];
