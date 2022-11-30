@@ -25,9 +25,9 @@ runs:
     - name: secp256k1 - install
       if: steps.secp256k1-cache.outputs.cache-hit != 'true'
       shell: bash
-      working-directory: ${{ input.path }}/src
+      working-directory: ${{ inputs.path }}/src
       run: |
         ./autogen.sh
-        ./configure --enable-module-extrakeys --enable-module-schnorrsig --prefix=${{ github.workspace }}/${{ input.path }}
+        ./configure --enable-module-extrakeys --enable-module-schnorrsig --prefix=${{ github.workspace }}/${{ inputs.path }}
         make
         make install
