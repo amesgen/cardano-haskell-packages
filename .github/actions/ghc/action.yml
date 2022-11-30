@@ -1,9 +1,12 @@
 name: Install GHC and cabal
 
 inputs:
+  ghc-version:
+    required: true
+    description: GHC version to install
   path:
     required: true
-    description: Path where to install GHC and cabal
+    description: Absolute path where to install GHC and cabal
 
 runs:
   using: "composite"

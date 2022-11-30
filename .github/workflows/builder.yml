@@ -44,7 +44,9 @@ jobs:
       - name: Install ghc ${{ inputs.ghc-version }}
         uses: ./.github/actions/ghc
         with:
-          path: extras/ghc
+          # this has to be an absolute path
+          path: ${{ github.workspace }}/extras/ghc
+          ghc-version: ${{ inputs.ghc-version }}
 
       - name: Set up cabal cache
         uses: actions/cache@v3
